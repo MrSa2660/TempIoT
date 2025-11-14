@@ -367,11 +367,24 @@ void handleSet() {
     server.send(400, "text/plain", "AP setup mode");
     return;
   }
-  if (server.hasArg("sp")) setpoint = server.arg("sp").toFloat();
+
+  bool changed = false;
+
+  if (server.hasArg("sp")) {
+    setpoint = server.arg("sp").toFloat();
+    changed = true;
+  }
   if (server.hasArg("h")) {
     hysteresis = server.arg("h").toFloat();
     if (hysteresis < 0.1) hysteresis = 0.1;
+    changed = true;
   }
+
+  if (changed) {
+    prefs.putDouble("setpoint", setpoint);       // NEW
+    prefs.putDouble("hysteresis", hysteresis);   // NEW (optional but nice)
+  }
+
   server.send(200, "text/plain", "OK");
 }
 
@@ -519,6 +532,9 @@ void setup() {
   sensors.begin();
   prefs.begin("thermo", false);
 
+  setpoint   = prefs.getDouble("setpoint", setpoint);       // defaults to current (21.0) if none
+  hysteresis = prefs.getDouble("hysteresis", hysteresis);   // defaults to 0.5 if none
+
   // Load historik fra NVS
   loadHistoryFromPrefs();
 
@@ -565,6 +581,7 @@ void loop() {
 
   if (upNow && !upPressed && (now - lastUpPress > DEBOUNCE_MS)) {
     setpoint += 0.5;
+    prefs.putDouble("setpoint", setpoint);   // NEW
     upPressed = true;
     lastUpPress = now;
   } else if (!upNow) {
@@ -573,6 +590,7 @@ void loop() {
 
   if (downNow && !downPressed && (now - lastDownPress > DEBOUNCE_MS)) {
     setpoint -= 0.5;
+    prefs.putDouble("setpoint", setpoint);   // NEW
     downPressed = true;
     lastDownPress = now;
   } else if (!downNow) {
